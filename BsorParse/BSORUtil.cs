@@ -7,12 +7,12 @@ namespace BeatSaberReplayHistory
 	{
 		internal static byte ReadByte(Stream stream) => (byte)stream.ReadByte();
 
-		internal static async Task<int> ReadInt(Stream stream)
+		internal static int ReadInt(Stream stream)
 		{
 			var buffer = ArrayPool<byte>.Shared.Rent(4);
 			try
 			{
-				await stream.ReadAsync(buffer, 0, 4);
+				stream.ReadAsync(buffer, 0, 4);
 				var val = BitConverter.ToInt32(buffer, 0);
 				if (BitConverter.IsLittleEndian)
 					return val;
@@ -25,12 +25,12 @@ namespace BeatSaberReplayHistory
 			}
 		}
 
-		internal static async Task<long> ReadLong(Stream stream)
+		internal static long ReadLong(Stream stream)
 		{
 			var buffer = ArrayPool<byte>.Shared.Rent(8);
 			try
 			{
-				await stream.ReadAsync(buffer, 0, 8);
+				stream.ReadAsync(buffer, 0, 8);
 				var val = BitConverter.ToInt64(buffer, 0);
 				if (BitConverter.IsLittleEndian)
 					return val;
@@ -43,12 +43,12 @@ namespace BeatSaberReplayHistory
 			}
 		}
 
-		internal static async Task<float> ReadFloat(Stream stream)
+		internal static float ReadFloat(Stream stream)
 		{
 			var buffer = ArrayPool<byte>.Shared.Rent(4);
 			try
 			{
-				await stream.ReadAsync(buffer, 0, 4);
+				stream.ReadAsync(buffer, 0, 4);
 				if (BitConverter.IsLittleEndian)
 					return BitConverter.ToSingle(buffer);
 				else
@@ -62,18 +62,18 @@ namespace BeatSaberReplayHistory
 
 		internal static bool ReadBool(Stream stream) => ReadByte(stream) != 0;
 
-		internal static async Task<string> ReadString(Stream stream)
+		internal static string ReadString(Stream stream)
 		{
-			var length = await ReadInt(stream);
+			var length = ReadInt(stream);
 			//BeatSaber-Web-Replays has a check for this and im not sure how trying to slice with a negative number would work?
 			//TODO Fix if I ever get a real example of this happening.
 			if (length < 0)
 				throw new Exception($"Invalid string length ({length})");
 			var bytes = new byte[length];
-			await stream.ReadAsync(bytes);
+			stream.Read(bytes);
 			using var rdrStream = new MemoryStream(bytes);
 			using var rdr = new StreamReader(rdrStream, System.Text.Encoding.UTF8);
-			return await rdr.ReadToEndAsync();
+			return rdr.ReadToEnd();
 		}
 
 		//BeatSaber-Web-Replays uses this as some sort of fix for names with emojis?
@@ -99,29 +99,29 @@ namespace BeatSaberReplayHistory
 		//return string;
 		//}
 
-		internal static async Task<BSORVector3> ReadVector3(Stream stream) =>
+		internal static BSORVector3 ReadVector3(Stream stream) =>
 			new BSORVector3()
 			{
-				X = await ReadFloat(stream),
-				Y = await ReadFloat(stream),
-				Z = await ReadFloat(stream)
+				X = ReadFloat(stream),
+				Y = ReadFloat(stream),
+				Z = ReadFloat(stream)
 			};
 
 
-		internal static async Task<BSORQuaternion> ReadQuaternion(Stream stream) =>
+		internal static BSORQuaternion ReadQuaternion(Stream stream) =>
 			new BSORQuaternion()
 			{
-				X = await ReadFloat(stream),
-				Y = await ReadFloat(stream),
-				Z = await ReadFloat(stream),
-				W = await ReadFloat(stream)
+				X = ReadFloat(stream),
+				Y = ReadFloat(stream),
+				Z = ReadFloat(stream),
+				W = ReadFloat(stream)
 			};
 
-		internal static async Task<BSOREuler> ReadEuler(Stream stream) =>
+		internal static BSOREuler ReadEuler(Stream stream) =>
 			new BSOREuler()
 			{
-				Position = await ReadVector3(stream),
-				Rotation = await ReadQuaternion(stream)
+				Position = ReadVector3(stream),
+				Rotation = ReadQuaternion(stream)
 			};
 	}
 }

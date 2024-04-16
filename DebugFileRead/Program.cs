@@ -27,8 +27,9 @@ namespace DebugFileRead
 			var filePath = "";
 			using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 			var decoder = new BSORDecode();
-			var replay = await decoder.DecodeBSORV1(fs);
+			var replay = decoder.DecodeBSORV1(fs);
 			Console.WriteLine("Read replay successfully");
+			await Task.Delay(0);
 		}
 
 		static async Task ParseDirectory()
@@ -49,7 +50,7 @@ namespace DebugFileRead
 					//I have found when running in parallel reading the whole file into memory first is faster 
 					// than using file streams where the disk has to constantly jump around to read a few bytes.
 					using var ms = new MemoryStream(await File.ReadAllBytesAsync(file, cancelToken));
-					replays.Add(await decoder.DecodeBSORV1(ms));
+					replays.Add(decoder.DecodeBSORV1(ms));
 				}
 				catch (Exception ex)
 				{
