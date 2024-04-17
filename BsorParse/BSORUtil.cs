@@ -52,7 +52,10 @@ namespace BeatSaberReplayHistory
 				if (BitConverter.IsLittleEndian)
 					return BitConverter.ToSingle(buffer);
 				else
-					return BitConverter.ToSingle(buffer.Reverse().ToArray());
+				{
+					(buffer[3], buffer[0], buffer[1], buffer[2]) = (buffer[0], buffer[3], buffer[2], buffer[1]);
+					return BitConverter.ToSingle(buffer);
+				}
 			}
 			finally
 			{
