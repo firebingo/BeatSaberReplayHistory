@@ -1,4 +1,6 @@
-﻿namespace BeatSaberReplayHistory
+﻿using System.Numerics;
+
+namespace BeatSaberReplayHistory
 {
 	public enum V1BSORStructType
 	{
@@ -8,6 +10,8 @@
 		Walls = 3,
 		Heights = 4,
 		Pauses = 5,
+		SaberOffsets = 6,
+		CustomData = 7
 	}
 
 	public enum V1BSORNoteEventType
@@ -26,6 +30,8 @@
 		public List<BSORWall> Walls { get; set; } = [];
 		public List<BSORHeight> Heights { get; set; } = [];
 		public List<BSORPause> Pauses { get; set; } = [];
+		public SaberOffsets SaberOffsets = new SaberOffsets();
+		public Dictionary<string, byte[]> CustomData = [];
 	}
 
 	public struct BSOREuler
@@ -131,5 +137,13 @@
 	{
 		public long Duration { get; set; }
 		public float Time { get; set; }
+	}
+
+	public class SaberOffsets
+	{
+		public BSORVector3 LeftSaberLocalPosition { get; set; }
+		public BSORQuaternion LeftSaberLocalRotation { get; set; }
+		public BSORVector3 RightSaberLocalPosition { get; set; }
+		public BSORQuaternion RightSaberLocalRotation { get; set; }
 	}
 }

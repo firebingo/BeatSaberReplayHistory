@@ -1,11 +1,24 @@
 ﻿using System.Buffers;
 using System.Buffers.Binary;
+using System.Text;
 
 namespace BeatSaberReplayHistory
 {
 	internal static class BSORUtil
 	{
-		internal static byte ReadByte(Stream stream) => (byte)stream.ReadByte();
+		internal static byte ReadByte(Stream stream)
+		{
+			var buffer = ArrayPool<byte>.Shared.Rent(1);
+			try
+			{
+				stream.ReadAsync(buffer, 0, 1);
+				return buffer[0];
+			}
+			finally
+			{
+				ArrayPool<byte>.Shared.Return(buffer);
+			}
+		}
 
 		internal static int ReadInt(Stream stream)
 		{
@@ -68,15 +81,53 @@ namespace BeatSaberReplayHistory
 		internal static string ReadString(Stream stream)
 		{
 			var length = ReadInt(stream);
-			//BeatSaber-Web-Replays has a check for this and im not sure how trying to slice with a negative number would work?
-			//TODO Fix if I ever get a real example of this happening.
-			if (length < 0)
-				throw new Exception($"Invalid string length ({length})");
-			var bytes = new byte[length];
-			stream.Read(bytes);
-			using var rdrStream = new MemoryStream(bytes);
-			using var rdr = new StreamReader(rdrStream, System.Text.Encoding.UTF8);
-			return rdr.ReadToEnd();
+			stream.Seek(-4, SeekOrigin.Current);
+			//Some weird Beatleader unicode fix thing.
+			if (length > 300 || length < 0)
+			{
+				stream.Seek(1, SeekOrigin.Current);
+				return ReadString(stream);
+			}
+			var bytes = ArrayPool<byte>.Shared.Rent(length);
+			stream.Seek(4, SeekOrigin.Current);
+			stream.Read(bytes, 0, length);
+			return Encoding.UTF8.GetString(bytes, 0, length);
+		}
+
+		internal static string ReadName(Stream stream)
+		{
+			int length = ReadInt(stream);
+			int lengthOffset = 0;
+			if (length > 0)
+			{
+				//BeatLeader is doing this to fix a unicode issue? This is some wacky shit.
+				//Save start position of stream
+				var pos = stream.Position;
+				//Seek to end of string length
+				stream.Seek(length, SeekOrigin.Current);
+				var i = ReadInt(stream);
+				stream.Seek(-4, SeekOrigin.Current);
+				//Check if int read after end of string is 6, 5, or 8??
+				// I have to assume these are expected values that would appear after this string
+				// and if its not its some weird unicode thing that is longer than expected?
+				while (i != 6
+					&& i != 5
+					&& i != 8)
+				{
+					lengthOffset++;
+					stream.Seek(1, SeekOrigin.Current);
+					i = ReadInt(stream);
+					stream.Seek(-4, SeekOrigin.Current);
+					if (lengthOffset > 50)
+						break;
+				}
+				//return stream to start of string to read it.
+				stream.Seek(pos, SeekOrigin.Begin);
+			}
+			var bytes = ArrayPool<byte>.Shared.Rent(length + lengthOffset);
+			stream.Read(bytes, 0, length + lengthOffset);
+			var s = Encoding.UTF8.GetString(bytes, 0, length + lengthOffset);
+			return s;
 		}
 
 		//BeatSaber-Web-Replays uses this as some sort of fix for names with emojis?
@@ -126,5 +177,13 @@ namespace BeatSaberReplayHistory
 				Position = ReadVector3(stream),
 				Rotation = ReadQuaternion(stream)
 			};
+
+		internal static byte[] ReadByteArray(Stream stream)
+		{
+			var length = ReadInt(stream);
+			var result = new byte[length];
+			stream.Read(result, 0, length);
+			return result;
+		}
 	}
 }

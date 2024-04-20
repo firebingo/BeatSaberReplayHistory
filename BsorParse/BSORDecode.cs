@@ -1,9 +1,10 @@
-﻿namespace BeatSaberReplayHistory
-{
-	public class BSORDecode
-	{
-		private readonly int V1_STRUCT_COUNT = 6;
+﻿using BsorParse.Util;
+using System.Collections.Generic;
 
+namespace BeatSaberReplayHistory
+{
+	public static class BSORDecode
+	{
 		/// <summary>
 		/// 
 		/// </summary>
@@ -11,45 +12,99 @@
 		/// <param name="skipFrames">If you don't need frame data this can save a lot of decoding time</param>
 		/// <returns></returns>
 		/// <exception cref="Exception"></exception>
-		public BSORReplay DecodeBSORV1(Stream stream, bool skipFrames = true)
+		public static BSORReplay DecodeBSORV1(Stream stream, bool skipFrames = true)
 		{
 			var retval = new BSORReplay();
 
 			if (!stream.CanRead)
-				throw new Exception("File stream is not readable");
+				throw new Exception("Stream is not readable");
 
-			if (stream.CanSeek)
-				stream.Seek(0, SeekOrigin.Begin);
+			if (!stream.CanSeek)
+				throw new Exception("Stream is not seekable");
+			stream.Seek(0, SeekOrigin.Begin);
 
 			int magic = BSORUtil.ReadInt(stream);
 			byte version = BSORUtil.ReadByte(stream);
-
+			
+			//Ive seen files that have some extra data at the end?
+			// So im checking these otherwise it can attempt to read a bad section and do bad things.
+			var readInfo = false;
+			var readFrames = false;
+			var readNotes = false;
+			var readWalls = false;
+			var readHeights = false;
+			var readPauses = false;
+			var readSaberOffsets = false;
+			var readCustomData = false;
 			if (version == 1 && magic == 0x442d3d69)
 			{
-				for (var i = 0; i < V1_STRUCT_COUNT; ++i)
+				for (var i = 0; i < (int)V1BSORStructType.CustomData && stream.Position < stream.Length; ++i)
 				{
 					var type = (V1BSORStructType)BSORUtil.ReadByte(stream);
 					switch (type)
 					{
 						case V1BSORStructType.Info:
-							retval.Info = DecodeInfoV1(stream);
+							if (!readInfo)
+							{
+								retval.Info = DecodeInfoV1(stream);
+								readInfo = true;
+							}
 							break;
 						case V1BSORStructType.Frames:
-							retval.Frames = DecodeFramesV1(stream, skipFrames);
+							if (!readFrames)
+							{
+								retval.Frames = DecodeFramesV1(stream, skipFrames);
+								readFrames = true;
+							}
 							break;
 						case V1BSORStructType.Notes:
-							retval.Notes = DecodeNotesV1(stream);
+							if (!readNotes)
+							{
+								retval.Notes = DecodeNotesV1(stream);
+								readNotes = true;
+							}
 							break;
 						case V1BSORStructType.Walls:
-							retval.Walls = DecodeWallsV1(stream);
+							if (!readWalls)
+							{
+								retval.Walls = DecodeWallsV1(stream);
+								readWalls = true;
+							}
 							break;
 						case V1BSORStructType.Heights:
-							retval.Heights = DecodeHeightsV1(stream);
+							if (!readHeights)
+							{
+								retval.Heights = DecodeHeightsV1(stream);
+								readHeights = true;
+							}
 							break;
 						case V1BSORStructType.Pauses:
-							retval.Pauses = DecodePausesV1(stream);
+							if (!readPauses)
+							{
+								retval.Pauses = DecodePausesV1(stream);
+								readPauses = true;
+							}
+							break;
+						case V1BSORStructType.SaberOffsets:
+							if (!readSaberOffsets)
+							{
+								retval.SaberOffsets = DecodeSaberOffsetsV1(stream);
+								readSaberOffsets = true;
+							}
+							break;
+						case V1BSORStructType.CustomData:
+							if (!readCustomData)
+							{
+								retval.CustomData = DecodeCustomData(stream);
+								readCustomData = true;
+							}
 							break;
 						default:
+							//If we have read all the main sections and found invalid data just let it continue
+							if(readInfo && readFrames && readNotes && readWalls && readHeights && readPauses)
+							{
+								break;
+							}
 							throw new Exception("Found invalid struct type in file.");
 					}
 				}
@@ -58,38 +113,44 @@
 			return retval;
 		}
 
-		private static BSORInfo DecodeInfoV1(Stream stream) =>
-			new BSORInfo()
-			{
-				Version = BSORUtil.ReadString(stream),
-				GameVersion = BSORUtil.ReadString(stream),
-				Timestamp = BSORUtil.ReadString(stream),
-				PlayerId = BSORUtil.ReadString(stream),
-				PlayerName = BSORUtil.ReadString(stream),
-				Platform = BSORUtil.ReadString(stream),
-				TrackingSystem = BSORUtil.ReadString(stream),
-				HMD = BSORUtil.ReadString(stream),
-				Controller = BSORUtil.ReadString(stream),
-				Hash = BSORUtil.ReadString(stream),
-				SongName = BSORUtil.ReadString(stream),
-				Mapper = BSORUtil.ReadString(stream),
-				Difficulty = BSORUtil.ReadString(stream),
-				Score = BSORUtil.ReadInt(stream),
-				Mode = BSORUtil.ReadString(stream),
-				Environment = BSORUtil.ReadString(stream),
-				Modifiers = BSORUtil.ReadString(stream),
-				JumpDistance = BSORUtil.ReadFloat(stream),
-				LeftHanded = BSORUtil.ReadBool(stream),
-				Height = BSORUtil.ReadFloat(stream),
-				StartTime = BSORUtil.ReadFloat(stream),
-				FailTime = BSORUtil.ReadFloat(stream),
-				Speed = BSORUtil.ReadFloat(stream),
-			};
+		private static BSORInfo DecodeInfoV1(Stream stream)
+		{
+			var retval = new BSORInfo();
+			
+			retval.Version = BSORUtil.ReadString(stream);
+			retval.GameVersion = BSORUtil.ReadString(stream);
+			retval.Timestamp = BSORUtil.ReadString(stream);
+			retval.PlayerId = BSORUtil.ReadString(stream);
+			retval.PlayerName = BSORUtil.ReadName(stream);
+			retval.Platform = BSORUtil.ReadString(stream);
+			retval.TrackingSystem = BSORUtil.ReadString(stream);
+			retval.HMD = BSORUtil.ReadString(stream);
+			retval.Controller = BSORUtil.ReadString(stream);
+			retval.Hash = BSORUtil.ReadString(stream);
+			retval.SongName = BSORUtil.ReadString(stream);
+			retval.Mapper = BSORUtil.ReadString(stream);
+			retval.Difficulty = BSORUtil.ReadString(stream);
+			retval.Score = BSORUtil.ReadInt(stream);
+			retval.Mode = BSORUtil.ReadString(stream);
+			retval.Environment = BSORUtil.ReadString(stream);
+			retval.Modifiers = BSORUtil.ReadString(stream);
+			retval.JumpDistance = BSORUtil.ReadFloat(stream);
+			retval.LeftHanded = BSORUtil.ReadBool(stream);
+			retval.Height = BSORUtil.ReadFloat(stream);
+			retval.StartTime = BSORUtil.ReadFloat(stream);
+			retval.FailTime = BSORUtil.ReadFloat(stream);
+			retval.Speed = BSORUtil.ReadFloat(stream);
+			return retval;
+		}
 
 		private static List<BSORFrame> DecodeFramesV1(Stream stream, bool skipFrames = false)
 		{
-			var retval = new List<BSORFrame>();
 			var length = BSORUtil.ReadInt(stream);
+			List<BSORFrame> retval;
+			if (skipFrames)
+				retval = [];
+			else
+				retval = new List<BSORFrame>(length);
 			for (var i = 0; i < length; i++)
 			{
 				if (skipFrames)
@@ -124,8 +185,8 @@
 
 		private static List<BSORNote> DecodeNotesV1(Stream stream)
 		{
-			var retval = new List<BSORNote>();
 			var length = BSORUtil.ReadInt(stream);
+			var retval = new List<BSORNote>(length);
 			for (var i = 0; i < length; i++)
 			{
 				retval.Add(DecodeNoteV1(stream));
@@ -135,42 +196,42 @@
 
 		private static BSORNote DecodeNoteV1(Stream stream)
 		{
-			var retVal = new BSORNote()
-			{
-				NoteId = BSORUtil.ReadInt(stream),
-				EventTime = BSORUtil.ReadFloat(stream),
-				SpawnTime = BSORUtil.ReadFloat(stream),
-				EventType = (V1BSORNoteEventType)BSORUtil.ReadInt(stream)
-			};
-			if (retVal.EventType == V1BSORNoteEventType.Good || retVal.EventType == V1BSORNoteEventType.Bad)
-				retVal.CutInfo = DecodeNoteCutInfoV1(stream);
-			return retVal;
+			var retval = BSORNotePool.Rent();
+			retval.NoteId = BSORUtil.ReadInt(stream);
+			retval.EventTime = BSORUtil.ReadFloat(stream);
+			retval.SpawnTime = BSORUtil.ReadFloat(stream);
+			retval.EventType = (V1BSORNoteEventType)BSORUtil.ReadInt(stream);
+			
+			if (retval.EventType == V1BSORNoteEventType.Good || retval.EventType == V1BSORNoteEventType.Bad)
+				retval.CutInfo = DecodeNoteCutInfoV1(stream);
+			return retval;
 		}
 
-		private static BSORNoteCutInfo DecodeNoteCutInfoV1(Stream stream) =>
-			new BSORNoteCutInfo()
-			{
-				SpeedOk = BSORUtil.ReadBool(stream),
-				DirectionOk = BSORUtil.ReadBool(stream),
-				SaberTypeOk = BSORUtil.ReadBool(stream),
-				WasCutTooSoon = BSORUtil.ReadBool(stream),
-				SaberSpeed = BSORUtil.ReadFloat(stream),
-				SaberDir = BSORUtil.ReadVector3(stream),
-				SaberType = BSORUtil.ReadInt(stream),
-				TimeDeviation = BSORUtil.ReadFloat(stream),
-				CutDirDeviation = BSORUtil.ReadFloat(stream),
-				CutPoint = BSORUtil.ReadVector3(stream),
-				CutNormal = BSORUtil.ReadVector3(stream),
-				CutDistanceToCenter = BSORUtil.ReadFloat(stream),
-				CutAngle = BSORUtil.ReadFloat(stream),
-				BeforeCutRating = BSORUtil.ReadFloat(stream),
-				AfterCutRating = BSORUtil.ReadFloat(stream)
-			};
+		private static BSORNoteCutInfo DecodeNoteCutInfoV1(Stream stream)
+		{
+			var retval = BSORNoteCutPool.Rent();
+			retval.SpeedOk = BSORUtil.ReadBool(stream);
+			retval.DirectionOk = BSORUtil.ReadBool(stream);
+			retval.SaberTypeOk = BSORUtil.ReadBool(stream);
+			retval.WasCutTooSoon = BSORUtil.ReadBool(stream);
+			retval.SaberSpeed = BSORUtil.ReadFloat(stream);
+			retval.SaberDir = BSORUtil.ReadVector3(stream);
+			retval.SaberType = BSORUtil.ReadInt(stream);
+			retval.TimeDeviation = BSORUtil.ReadFloat(stream);
+			retval.CutDirDeviation = BSORUtil.ReadFloat(stream);
+			retval.CutPoint = BSORUtil.ReadVector3(stream);
+			retval.CutNormal = BSORUtil.ReadVector3(stream);
+			retval.CutDistanceToCenter = BSORUtil.ReadFloat(stream);
+			retval.CutAngle = BSORUtil.ReadFloat(stream);
+			retval.BeforeCutRating = BSORUtil.ReadFloat(stream);
+			retval.AfterCutRating = BSORUtil.ReadFloat(stream);
+			return retval;
+		}
 
 		private static List<BSORWall> DecodeWallsV1(Stream stream)
 		{
-			var retval = new List<BSORWall>();
 			var length = BSORUtil.ReadInt(stream);
+			var retval = new List<BSORWall>(length);
 			for (var i = 0; i < length; i++)
 			{
 				retval.Add(new BSORWall()
@@ -186,8 +247,8 @@
 
 		private static List<BSORHeight> DecodeHeightsV1(Stream stream)
 		{
-			var retval = new List<BSORHeight>();
 			var length = BSORUtil.ReadInt(stream);
+			var retval = new List<BSORHeight>(length);
 			for (var i = 0; i < length; i++)
 			{
 				retval.Add(new BSORHeight()
@@ -201,8 +262,8 @@
 
 		private static List<BSORPause> DecodePausesV1(Stream stream)
 		{
-			var retval = new List<BSORPause>();
 			var length = BSORUtil.ReadInt(stream);
+			var retval = new List<BSORPause>(length);
 			for (var i = 0; i < length; i++)
 			{
 				retval.Add(new BSORPause()
@@ -210,6 +271,28 @@
 					Duration = BSORUtil.ReadLong(stream),
 					Time = BSORUtil.ReadFloat(stream)
 				});
+			}
+			return retval;
+		}
+
+		private static SaberOffsets DecodeSaberOffsetsV1(Stream stream) =>
+			new SaberOffsets
+			{
+				LeftSaberLocalPosition = BSORUtil.ReadVector3(stream),
+				LeftSaberLocalRotation = BSORUtil.ReadQuaternion(stream),
+				RightSaberLocalPosition = BSORUtil.ReadVector3(stream),
+				RightSaberLocalRotation = BSORUtil.ReadQuaternion(stream)
+			};
+
+		private static Dictionary<string, byte[]> DecodeCustomData(Stream stream)
+		{
+			var length = BSORUtil.ReadInt(stream);
+			var retval = new Dictionary<string, byte[]>(length);
+			for (var i = 0; i < length; i++)
+			{
+				var key = BSORUtil.ReadString(stream);
+				var value = BSORUtil.ReadByteArray(stream);
+				retval[key] = value;
 			}
 			return retval;
 		}

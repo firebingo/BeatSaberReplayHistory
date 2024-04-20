@@ -4,4 +4,5 @@ namespace ReplayHistoryUI.ViewModels;
 
 public class ViewModelBase : ObservableObject
 {
+
 }

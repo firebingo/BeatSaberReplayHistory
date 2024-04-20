@@ -1,5 +1,7 @@
 ﻿using BeatSaberReplayHistory;
+using BsorParse.Model;
 using System.Collections.Concurrent;
+using System.Runtime;
 
 namespace DebugFileRead
 {
@@ -25,9 +27,8 @@ namespace DebugFileRead
 		static async Task ParseSingle()
 		{
 			var filePath = "";
-			using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-			var decoder = new BSORDecode();
-			var replay = decoder.DecodeBSORV1(fs);
+			using var ms = new MemoryStream(await File.ReadAllBytesAsync(filePath));
+			var replay = BSORDecode.DecodeBSORV1(ms);
 			Console.WriteLine("Read replay successfully");
 			await Task.Delay(0);
 		}
@@ -35,10 +36,10 @@ namespace DebugFileRead
 		static async Task ParseDirectory()
 		{
 			var directory = "";
-			var files = Directory.GetFiles(directory);
-			var decoder = new BSORDecode();
-			ConcurrentBag<BSORReplay> replays = [];
-			ConcurrentBag<Exception> errors = [];
+			var files = Directory.GetFiles(directory).Where(x => !x.Contains("-practice-")).ToList();
+			//files = [.. files[0..128]];
+			ConcurrentBag<StatsReplay> replays = [];
+			ConcurrentBag<(string, Exception)> errors = [];
 			ParallelOptions parallelOptions = new()
 			{
 				MaxDegreeOfParallelism = 8
@@ -50,13 +51,19 @@ namespace DebugFileRead
 					//I have found when running in parallel reading the whole file into memory first is faster 
 					// than using file streams where the disk has to constantly jump around to read a few bytes.
 					using var ms = new MemoryStream(await File.ReadAllBytesAsync(file, cancelToken));
-					replays.Add(decoder.DecodeBSORV1(ms));
+					var replay = BSORDecode.DecodeBSORV1(ms);
+					var sReplay = new StatsReplay(replay);
+					replays.Add(sReplay);
 				}
 				catch (Exception ex)
 				{
-					errors.Add(ex);
+					errors.Add((file, ex));
 				}
 			});
+			GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
+			long x = GC.GetTotalMemory(false);
 			var t = "";
 		}
 	}
