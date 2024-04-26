@@ -64,13 +64,17 @@ namespace BsorParse.Model
 			var misses = 0;
 			var bombCuts = 0;
 			var leftCuts = ArrayPool<int>.Shared.Rent(3);
+			leftCuts[0] = leftCuts[1] = leftCuts[2] = 0;
 			var rightCuts = ArrayPool<int>.Shared.Rent(3);
+			rightCuts[0] = rightCuts[1] = rightCuts[2] = 0;
 			var leftAverageCut = ArrayPool<float>.Shared.Rent(3);
+			leftAverageCut[0] = leftAverageCut[1] = leftAverageCut[2] = 0;
 			float leftPreSwing = 0.0f;
 			float leftTimeDependence = 0.0f;
 			float leftAcc = 0.0f;
 			float leftPostSwing = 0.0f;
 			var rightAverageCut = ArrayPool<float>.Shared.Rent(3);
+			rightAverageCut[0] = rightAverageCut[1] = rightAverageCut[2] = 0;
 			float rightPreSwing = 0.0f;
 			float rightTimeDependence = 0.0f;
 			float rightAcc = 0.0f;
@@ -173,7 +177,6 @@ namespace BsorParse.Model
 					events.Add(scoreEvent);
 				}
 
-				//TODO these stats need to be outside the notes loop
 				if (leftCuts[0] > 0)
 				{
 					LeftBeforeCut = leftAverageCut[0] / leftCuts[0];

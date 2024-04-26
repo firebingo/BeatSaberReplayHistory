@@ -223,7 +223,7 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 			Mapping = (val, index) => new(val.XValue, val.YValue),
 			XToolTipLabelFormatter = (point) =>
 			{
-				var s = $"Date: {point.Model!.XValue:yy-MM-dd}";
+				var s = $"Date: {new DateTime(point.Model!.XValue):yy-MM-dd}";
 				foreach (var v in point.Model.SecondaryValues)
 				{
 					s += $"\r\n{v.Key}: {v.Value}";
@@ -246,7 +246,7 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 		});
 		ChartYAxes.Add(new Axis()
 		{
-			Name = "Total Accuracy",
+			Name = ChartUtil.ChartYTypeToName(_currentFilter.Type),
 			ShowSeparatorLines = true,
 			NamePaint = new SolidColorPaint
 			{

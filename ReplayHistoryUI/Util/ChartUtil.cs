@@ -15,7 +15,7 @@ namespace ReplayHistoryUI.Util
 		public static string ChartYTypeToName(ChartYType value) =>
 		value switch
 		{
-			ChartYType.TotalAccuracy or _ => "Total Accuracy"
+			ChartYType.TotalAccuracy or _ => "Rank"
 		};
 
 		public static int GetDaysValueFromSelection(ChartDateSelectionValue value) =>

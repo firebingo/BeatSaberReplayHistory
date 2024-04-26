@@ -124,8 +124,8 @@ namespace ReplayHistoryUI.Services
 						XValue = x.First().Info.Time!.Value.Ticks,
 						YValue = input.Hand switch
 						{
-							ChartFilterHand.Left => Math.Round(x.Average(y => y.LeftTotalAccuracy), 2),
-							ChartFilterHand.Right => Math.Round(x.Average(y => y.RightTotalAccuracy), 2),
+							ChartFilterHand.Left => Math.Round((x.Average(y => y.LeftTotalAccuracy) / 115.0) * 100.0f, 2),
+							ChartFilterHand.Right => Math.Round((x.Average(y => y.RightTotalAccuracy) / 115.0) * 100.0f, 2),
 							_ or ChartFilterHand.Both => Math.Round(x.Average(y => y.Accuracy) * 100.0f, 2)
 						},
 						SecondaryValues = new Dictionary<string, string>()
