@@ -3,6 +3,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:ReplayHistoryUI.ViewModels"
+			 xmlns:converters="clr-namespace:ReplayHistoryUI.Converters"
+			 xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ReplayHistoryUI.Views.ChartView"
              x:DataType="vm:ChartViewModel">
@@ -11,15 +13,88 @@
          to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
 		<vm:ChartViewModel />
 	</Design.DataContext>
+	<UserControl.Resources>
+		<converters:ChartViewLoadingToBoolConverter x:Key="chartViewLoadingToBoolConverter"/>
+	</UserControl.Resources>
 	<!--<Button Command="{Binding Test}" CommandParameter="{Binding TestValue}">Test</Button>-->
 	<Panel>
-		<Panel IsVisible="{Binding NeedDirectory}" VerticalAlignment="Center" HorizontalAlignment="Center">
+		<Panel VerticalAlignment="Center" HorizontalAlignment="Center"
+			IsVisible="{Binding LoadingStatus, 
+			Converter={StaticResource chartViewLoadingToBoolConverter},
+			ConverterParameter={x:Static vm:ChartViewLoadingStatus.NeedDirectory}}">
 			<Label>Set directory under Settings->Change Directory</Label>
 		</Panel>
-		<Panel IsVisible="{Binding Loading}" VerticalAlignment="Center" HorizontalAlignment="Center">
+		<Panel VerticalAlignment="Center" HorizontalAlignment="Center"
+			   IsVisible="{Binding LoadingStatus, 
+			   Converter={StaticResource chartViewLoadingToBoolConverter},
+			   ConverterParameter={x:Static vm:ChartViewLoadingStatus.Loading}}">
 			<Grid RowDefinitions="55,5" VerticalAlignment="Center" HorizontalAlignment="Center">
 				<Label HorizontalAlignment="Center">Loading Replays...</Label>
 				<ProgressBar HorizontalAlignment="Center" Minimum="0" Maximum="100" Value="{Binding LoadingProgress}" />
+			</Grid>
+		</Panel>
+		<Panel VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+			IsVisible="{Binding LoadingStatus, 
+			Converter={StaticResource chartViewLoadingToBoolConverter},
+			ConverterParameter={x:Static vm:ChartViewLoadingStatus.Loaded}}"
+			>
+			<Grid RowDefinitions="30,*,32" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+				<Panel Grid.Row="0">
+					<ListBox SelectionMode="Single" 
+							 ItemsSource="{Binding ChartDateSelection}" 
+							 Background="Transparent" 
+							 SelectedItem="{Binding DateSelectedValue}">
+						<ListBox.ItemsPanel>
+							<ItemsPanelTemplate>
+								<StackPanel Orientation="Horizontal" HorizontalAlignment="Right"/>
+							</ItemsPanelTemplate>
+						</ListBox.ItemsPanel>
+						<ListBox.Styles>
+							<Style Selector="ListBoxItem">
+								<Setter Property="Width" Value="40"/>
+								<Setter Property="Margin" Value="0"/>
+								<Setter Property="Padding" Value="0"/>
+							</Style>
+						</ListBox.Styles>
+						<ListBox.ItemTemplate>
+							<DataTemplate x:DataType="vm:ChartDateSelectionItem">
+								<Label Content="{Binding Text}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+							</DataTemplate>
+						</ListBox.ItemTemplate>
+					</ListBox>
+					<!--<StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+						<Button Command="{Binding UpdateDateFilter}" CommandParameter="7">7D</Button>
+						<Button Command="{Binding UpdateDateFilter}" CommandParameter="30">30D</Button>
+						<Button Command="{Binding UpdateDateFilter}" CommandParameter="-3">6M</Button>
+						<Button Command="{Binding UpdateDateFilter}" CommandParameter="-4">1Y</Button>
+						<Button Command="{Binding UpdateDateFilter}" CommandParameter="-2">YTD</Button>
+						<Button Command="{Binding UpdateDateFilter}" CommandParameter="9999">All</Button>
+					</StackPanel>-->
+				</Panel>
+				<Panel Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+					<lvc:CartesianChart
+						Series="{Binding ChartSeries}"
+						XAxes="{Binding ChartXAxes}"
+						YAxes="{Binding ChartYAxes}">
+					</lvc:CartesianChart>
+				</Panel>
+				<Panel Grid.Row="2">
+					<StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+						<StackPanel Orientation="Horizontal">
+							<Label VerticalAlignment="Center">Hand:</Label>
+							<ComboBox VerticalAlignment="Center" 
+									  ItemsSource="{Binding HandSelection}" 
+									  SelectedItem="{Binding HandSelectedValue}" 
+									  Width="80">
+								<ComboBox.ItemTemplate>
+									<DataTemplate x:DataType="vm:ChartComboBoxItem">
+										<TextBlock Text="{Binding Text}" />
+									</DataTemplate>
+								</ComboBox.ItemTemplate>
+							</ComboBox>
+						</StackPanel>
+					</StackPanel>
+				</Panel>
 			</Grid>
 		</Panel>
 	</Panel>

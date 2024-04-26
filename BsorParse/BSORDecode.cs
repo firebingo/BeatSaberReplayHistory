@@ -1,5 +1,4 @@
 ﻿using BsorParse.Util;
-using System.Collections.Generic;
 
 namespace BeatSaberReplayHistory
 {
@@ -25,7 +24,7 @@ namespace BeatSaberReplayHistory
 
 			int magic = BSORUtil.ReadInt(stream);
 			byte version = BSORUtil.ReadByte(stream);
-			
+
 			//Ive seen files that have some extra data at the end?
 			// So im checking these otherwise it can attempt to read a bad section and do bad things.
 			var readInfo = false;
@@ -101,7 +100,7 @@ namespace BeatSaberReplayHistory
 							break;
 						default:
 							//If we have read all the main sections and found invalid data just let it continue
-							if(readInfo && readFrames && readNotes && readWalls && readHeights && readPauses)
+							if (readInfo && readFrames && readNotes && readWalls && readHeights && readPauses)
 							{
 								break;
 							}
@@ -116,7 +115,7 @@ namespace BeatSaberReplayHistory
 		private static BSORInfo DecodeInfoV1(Stream stream)
 		{
 			var retval = new BSORInfo();
-			
+
 			retval.Version = BSORUtil.ReadString(stream);
 			retval.GameVersion = BSORUtil.ReadString(stream);
 			retval.Timestamp = BSORUtil.ReadString(stream);
@@ -201,7 +200,7 @@ namespace BeatSaberReplayHistory
 			retval.EventTime = BSORUtil.ReadFloat(stream);
 			retval.SpawnTime = BSORUtil.ReadFloat(stream);
 			retval.EventType = (V1BSORNoteEventType)BSORUtil.ReadInt(stream);
-			
+
 			if (retval.EventType == V1BSORNoteEventType.Good || retval.EventType == V1BSORNoteEventType.Bad)
 				retval.CutInfo = DecodeNoteCutInfoV1(stream);
 			return retval;

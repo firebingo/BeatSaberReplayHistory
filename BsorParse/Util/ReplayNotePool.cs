@@ -14,7 +14,7 @@ namespace BsorParse.Util
 			{
 				_pool.Enqueue(new ReplayNote());
 			}
-		}		
+		}
 
 		internal static ReplayNote Rent()
 		{

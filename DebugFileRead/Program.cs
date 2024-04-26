@@ -35,7 +35,7 @@ namespace DebugFileRead
 
 		static async Task ParseDirectory()
 		{
-			var directory = "";
+			var directory = "I:\\Games\\BSLegacyLauncher\\Installed Versions\\Beat Saber 1.29.1\\UserData\\BeatLeader\\Replays";
 			var files = Directory.GetFiles(directory).Where(x => !x.Contains("-practice-")).ToList();
 			//files = [.. files[0..128]];
 			ConcurrentBag<StatsReplay> replays = [];

@@ -1,5 +1,4 @@
-﻿using Avalonia.Controls;
-using CommunityToolkit.Mvvm.DependencyInjection;
+﻿using CommunityToolkit.Mvvm.DependencyInjection;
 using ReplayHistoryUI.Models;
 using ReplayHistoryUI.Util;
 using System.IO;

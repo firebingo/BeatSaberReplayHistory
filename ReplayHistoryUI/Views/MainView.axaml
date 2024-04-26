@@ -12,14 +12,17 @@
          to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
 		<vm:MainViewModel />
 	</Design.DataContext>
-	<DockPanel>
-		<Menu DockPanel.Dock="Top">
-			<MenuItem Header="Settings">
-				<MenuItem Header="Change Directory" Command="{Binding SetDirectory}"/>
-			</MenuItem>
-		</Menu>
-		<Panel>
-			<views:ChartView />
-		</Panel>
-	</DockPanel>
+	<Panel VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+		<DockPanel>
+			<Menu DockPanel.Dock="Top">
+				<MenuItem Header="Settings">
+					<MenuItem Header="Change Directory" Command="{Binding SetDirectory}"/>
+				</MenuItem>
+			</Menu>
+			<Grid RowDefinitions="1,*">
+				<Separator VerticalAlignment="Top" HorizontalAlignment="Stretch" Margin="0" Grid.Row="0"/>
+				<views:ChartView Grid.Row="1"/>
+			</Grid>
+		</DockPanel>
+	</Panel>
 </UserControl>

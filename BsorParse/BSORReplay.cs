@@ -1,6 +1,4 @@
-﻿using System.Numerics;
-
-namespace BeatSaberReplayHistory
+﻿namespace BeatSaberReplayHistory
 {
 	public enum V1BSORStructType
 	{
@@ -80,6 +78,10 @@ namespace BeatSaberReplayHistory
 		public float StartTime { get; set; } = 0.0f;
 		public float FailTime { get; set; } = 0.0f;
 		public float Speed { get; set; } = 0.0f;
+		public DateTimeOffset? Time
+		{
+			get => !long.TryParse(Timestamp, out var l) ? null : DateTimeOffset.FromUnixTimeSeconds(l).ToLocalTime();
+		}
 	}
 
 	public class BSORFrame

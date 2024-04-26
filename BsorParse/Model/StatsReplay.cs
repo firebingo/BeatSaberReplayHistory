@@ -20,6 +20,7 @@ namespace BsorParse.Model
 	public class StatsReplay
 	{
 		public BSORInfo Info { get; set; } = new BSORInfo();
+		public float LengthSeconds { get; set; }
 		public int MaxCombo { get; set; }
 		public int TotalScore { get; set; }
 		public int MaxScore { get; set; }
@@ -28,6 +29,7 @@ namespace BsorParse.Model
 		public int Misses { get; set; }
 		public int BadCuts { get; set; }
 		public int BombCuts { get; set; }
+		public int TotalNotes { get; set; }
 		public int TotalMisses
 		{
 			get => Misses + BadCuts + BombCuts;
@@ -91,7 +93,7 @@ namespace BsorParse.Model
 						replayNote.UpdateNote(note);
 						//We no longer need the original note object or notes array so free the objects.
 						BSORNotePool.Return(note);
-						if(note.CutInfo != null)
+						if (note.CutInfo != null)
 							BSORNoteCutPool.Return(note.CutInfo);
 						if (replayNote.NoteParams.ColorType == 0)
 						{
@@ -171,6 +173,7 @@ namespace BsorParse.Model
 					events.Add(scoreEvent);
 				}
 
+				//TODO these stats need to be outside the notes loop
 				if (leftCuts[0] > 0)
 				{
 					LeftBeforeCut = leftAverageCut[0] / leftCuts[0];
@@ -276,6 +279,8 @@ namespace BsorParse.Model
 				TotalScore = events.Last().TotalScore;
 				FullClear = replay.Walls.Count == 0 && badCuts == 0 && bombCuts == 0 && misses == 0;
 				WallHits = replay.Walls.Count;
+				TotalNotes = replay.Notes.Count;
+				LengthSeconds = events.Last().Time;
 				Misses = misses;
 				BombCuts = bombCuts;
 				BadCuts = badCuts;
