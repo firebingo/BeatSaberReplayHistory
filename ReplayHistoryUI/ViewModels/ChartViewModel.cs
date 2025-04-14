@@ -136,8 +136,8 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 		];
 		_handSelectedValue = HandSelection[0];
 		_chartSeries = [];
-		_chartXAxes = [];
-		_chartYAxes = [];
+		_chartXAxes = [new Axis()];
+		_chartYAxes = [new Axis()];
 		_currentFilter = new ChartFilterInput()
 		{
 			DaysOffset = ChartUtil.GetDaysValueFromSelection(_dateSelectedValue.Days),
@@ -294,10 +294,8 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 			((LineSeries<ChartPoint>)ChartSeries[0]).GeometryFill = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, _currentFilter.Hand));
 			((LineSeries<ChartPoint>)ChartSeries[0]).Stroke = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, _currentFilter.Hand)) { StrokeThickness = 3 };
 		}
-		ChartSeries[0].Values = vals;
+		ChartSeries[0].Values = vals.ToList();
 	}
-
-
 
 	public void UpdateHandFilter(int value)
 	{
