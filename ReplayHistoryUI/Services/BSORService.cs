@@ -91,9 +91,107 @@ namespace ReplayHistoryUI.Services
 			_replays = [.. replays];
 		}
 
-		public List<ChartPoint> GetChartInfo(ChartFilterInput input)
+		private static ChartPoint CreateChartPoint<T>(ChartFilterInput input, ChartFilterHand hand, IGrouping<T, StatsReplay> x, TimeSpan time)
 		{
-			var retval = new List<ChartPoint>();
+			return new ChartPoint
+			{
+				XValue = x.First().Info.Time!.Value.Ticks,
+				YValue = input.Type switch
+				{
+					ChartYType.Before => hand switch
+					{
+						ChartFilterHand.Left => Math.Round(x.Average(y => y.LeftBeforeCut), 2),
+						ChartFilterHand.Right => Math.Round(x.Average(y => y.RightBeforeCut), 2),
+						_ or ChartFilterHand.Average => Math.Round((x.Average(y => y.LeftBeforeCut) + x.Average(y => y.RightBeforeCut)) / 2.0, 2)
+					},
+					ChartYType.Accuracy => hand switch
+					{
+						ChartFilterHand.Left => Math.Round(x.Average(y => y.LeftAccuracy), 2),
+						ChartFilterHand.Right => Math.Round(x.Average(y => y.RightAccuracy), 2),
+						_ or ChartFilterHand.Average => Math.Round((x.Average(y => y.LeftAccuracy) + x.Average(y => y.RightAccuracy)) / 2.0, 2)
+					},
+					ChartYType.After => hand switch
+					{
+						ChartFilterHand.Left => Math.Round(x.Average(y => y.LeftAfterCut), 2),
+						ChartFilterHand.Right => Math.Round(x.Average(y => y.RightAfterCut), 2),
+						_ or ChartFilterHand.Average => Math.Round((x.Average(y => y.LeftAfterCut) + x.Average(y => y.RightAfterCut)) / 2.0, 2)
+					},
+					ChartYType.TimeDependence => hand switch
+					{
+						ChartFilterHand.Left => Math.Round(x.Average(y => y.LeftTimeDependence), 2),
+						ChartFilterHand.Right => Math.Round(x.Average(y => y.RightTimeDependence), 2),
+						_ or ChartFilterHand.Average => Math.Round((x.Average(y => y.LeftTimeDependence) + x.Average(y => y.RightTimeDependence)) / 2.0, 2)
+					},
+					ChartYType.TotalMisses => hand switch
+					{
+						ChartFilterHand.Left => x.Sum(y => y.LeftMisses + y.LeftBadCuts + y.LeftBombCuts),
+						ChartFilterHand.Right => x.Sum(y => y.RightMisses + y.RightBadCuts + y.RightBombCuts),
+						_ or ChartFilterHand.Average => x.Sum(y => y.TotalMisses)
+					},
+					ChartYType.Misses => hand switch
+					{
+						ChartFilterHand.Left => x.Sum(y => y.LeftMisses),
+						ChartFilterHand.Right => x.Sum(y => y.RightMisses),
+						_ or ChartFilterHand.Average => x.Sum(y => y.Misses),
+					},
+					ChartYType.BadCuts => hand switch
+					{
+						ChartFilterHand.Left => x.Sum(y => y.LeftBadCuts),
+						ChartFilterHand.Right => x.Sum(y => y.RightBadCuts),
+						_ or ChartFilterHand.Average => x.Sum(y => y.BadCuts)
+					},
+					ChartYType.BombHits => hand switch
+					{
+						ChartFilterHand.Left => x.Sum(y => y.LeftBombCuts),
+						ChartFilterHand.Right => x.Sum(y => y.RightBombCuts),
+						_ or ChartFilterHand.Average => x.Sum(y => y.BombCuts)
+					},
+					ChartYType.WallHits => hand switch
+					{
+						_ => x.Sum(y => y.WallHits)
+					},
+					ChartYType.SongsPlayed => hand switch
+					{
+						_ => x.Count()
+					},
+					ChartYType.TimePlayed => hand switch
+					{
+						_ => time.TotalMinutes
+					},
+					_ or ChartYType.TotalAccuracy => hand switch
+					{
+						ChartFilterHand.Left => Math.Round((x.Average(y => y.LeftTotalAccuracy) / 115.0) * 100.0f, 2),
+						ChartFilterHand.Right => Math.Round((x.Average(y => y.RightTotalAccuracy) / 115.0) * 100.0f, 2),
+						_ or ChartFilterHand.Average => Math.Round(x.Average(y => y.Accuracy) * 100.0f, 2)
+					}
+				},
+				SecondaryValues = new Dictionary<string, string>()
+				{
+					{ "Songs Played", x.Count().ToString() },
+					{ "Time Played", time.TotalMinutes > 60 ? time.ToString(@"hh\:mm\:ss") : time.ToString(@"mm\:ss") }
+				}
+			};
+		}
+
+		public static ChartPoint FilterSelect<T>(ChartFilterInput input, ChartFilterHand hand, IGrouping<T, StatsReplay> x)
+		{
+			TimeSpan time = TimeSpan.Zero;
+			if (x.Count() == 1)
+			{
+				time = new TimeSpan(0, 0, 0, 0, (int)(x.First().LengthSeconds * 1000));
+			}
+			else
+			{
+				var order = x.OrderBy(y => y.Info.Time);
+				var lastTime = ((DateTimeOffset)order.Last().Info.Time!).AddSeconds(order.Last().LengthSeconds);
+				time = (TimeSpan)(lastTime - order.First().Info.Time)!;
+			}
+			return CreateChartPoint(input, ChartFilterHand.Left, x, time);
+		}
+
+		public List<List<ChartPoint>> GetChartInfo(ChartFilterInput input)
+		{
+			var retval = new List<List<ChartPoint>>();
 
 			DateTimeOffset? minDate = input.DaysOffset == -1 ? null : DateTimeOffset.Now.AddDays(-input.DaysOffset);
 
@@ -103,43 +201,31 @@ namespace ReplayHistoryUI.Services
 				.OrderBy(x => x.Info.Time)
 				.GroupBy(x => new { x.Info.Time!.Value.DayOfYear, x.Info.Time.Value.Year });
 
-			IEnumerable<ChartPoint> filtered = [];
-			if (input.Type == ChartYType.TotalAccuracy)
+			if (input.Hand == ChartFilterHand.Both)
 			{
-				filtered = dateGrouping.Select(x =>
-				{
-					TimeSpan time = TimeSpan.Zero;
-					if (x.Count() == 1)
-					{
-						time = new TimeSpan(0, 0, 0, 0, (int)(x.First().LengthSeconds * 1000));
-					}
-					else
-					{
-						var order = x.OrderBy(y => y.Info.Time);
-						var lastTime = ((DateTimeOffset)order.Last().Info.Time!).AddSeconds(order.Last().LengthSeconds);
-						time = (TimeSpan)(lastTime - order.First().Info.Time)!;
-					}
-					var c = new ChartPoint
-					{
-						XValue = x.First().Info.Time!.Value.Ticks,
-						YValue = input.Hand switch
-						{
-							ChartFilterHand.Left => Math.Round((x.Average(y => y.LeftTotalAccuracy) / 115.0) * 100.0f, 2),
-							ChartFilterHand.Right => Math.Round((x.Average(y => y.RightTotalAccuracy) / 115.0) * 100.0f, 2),
-							_ or ChartFilterHand.Both => Math.Round(x.Average(y => y.Accuracy) * 100.0f, 2)
-						},
-						SecondaryValues = new Dictionary<string, string>()
-						{
-							{ "Songs Played", x.Count().ToString() },
-							{ "Time Played", time.TotalMinutes > 60 ? time.ToString(@"hh\:mm\:ss") : time.ToString(@"mm\:ss") }
-						}
-					};
+				//Left
+				var addRet = new List<ChartPoint>();
+				IEnumerable<ChartPoint> filtered = [];
+				filtered = dateGrouping.Select(x => FilterSelect(input, ChartFilterHand.Left, x));
+				addRet.AddRange(filtered);
+				retval.Add(addRet);
 
-					return c;
-				});
+				//Right
+				addRet = [];
+				filtered = [];
+				filtered = dateGrouping.Select(x => FilterSelect(input, ChartFilterHand.Right, x));
+				addRet.AddRange(filtered);
+				retval.Add(addRet);
+			}
+			else
+			{
+				var addRet = new List<ChartPoint>();
+				IEnumerable<ChartPoint> filtered = [];
+				filtered = dateGrouping.Select(x => FilterSelect(input, input.Hand, x));
+				addRet.AddRange(filtered);
+				retval.Add(addRet);
 			}
 
-			retval.AddRange(filtered);
 			return retval;
 		}
 	}

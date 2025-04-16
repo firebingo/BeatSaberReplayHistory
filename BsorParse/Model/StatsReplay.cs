@@ -27,8 +27,14 @@ namespace BsorParse.Model
 		//If this run had been a full clear
 		public float FullClearAccuracy { get; set; }
 		public int Misses { get; set; }
+		public int LeftMisses { get; set; }
+		public int RightMisses { get; set; }
 		public int BadCuts { get; set; }
+		public int LeftBadCuts { get; set; }
+		public int RightBadCuts { get; set; }
 		public int BombCuts { get; set; }
+		public int LeftBombCuts { get; set; }
+		public int RightBombCuts { get; set; }
 		public int TotalNotes { get; set; }
 		public int TotalMisses
 		{
@@ -61,8 +67,14 @@ namespace BsorParse.Model
 			Accuracy = baseScore / (float)MaxScore;
 
 			var badCuts = 0;
+			var leftBadCuts = 0;
+			var rightBadCuts = 0;
 			var misses = 0;
+			var leftMisses = 0;
+			var rightMisses = 0;
 			var bombCuts = 0;
+			var leftBombCuts = 0;
+			var rightBombCuts = 0;
 			var leftCuts = ArrayPool<int>.Shared.Rent(3);
 			leftCuts[0] = leftCuts[1] = leftCuts[2] = 0;
 			var rightCuts = ArrayPool<int>.Shared.Rent(3);
@@ -85,11 +97,29 @@ namespace BsorParse.Model
 				foreach (var note in replay.Notes)
 				{
 					if (note.EventType == V1BSORNoteEventType.Miss)
+					{
 						misses++;
+						if (note.CutInfo?.SaberType == 0)
+							leftMisses++;
+						else if (note.CutInfo?.SaberType == 1)
+							rightMisses++;
+					}
 					else if (note.EventType == V1BSORNoteEventType.Bad)
+					{
 						badCuts++;
+						if (note.CutInfo?.SaberType == 0)
+							leftBadCuts++;
+						else if (note.CutInfo?.SaberType == 1)
+							rightBadCuts++;
+					}
 					else if (note.EventType == V1BSORNoteEventType.Bomb)
+					{
 						bombCuts++;
+						if (note.CutInfo?.SaberType == 0)
+							leftBombCuts++;
+						else if (note.CutInfo?.SaberType == 1)
+							rightBombCuts++;
+					}
 
 					var replayNote = ReplayNotePool.Rent();
 					try
@@ -285,8 +315,14 @@ namespace BsorParse.Model
 				TotalNotes = replay.Notes.Count;
 				LengthSeconds = events.Last().Time;
 				Misses = misses;
+				LeftMisses = leftMisses;
+				RightMisses = rightMisses;
 				BombCuts = bombCuts;
+				LeftBombCuts = leftBombCuts;
+				RightBombCuts = rightBombCuts;
 				BadCuts = badCuts;
+				LeftBadCuts = leftBadCuts;
+				RightBadCuts = rightBadCuts;
 			}
 			catch
 			{

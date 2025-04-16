@@ -64,7 +64,6 @@ namespace DebugFileRead
 			GC.Collect();
 			GC.WaitForPendingFinalizers();
 			long x = GC.GetTotalMemory(false);
-			var t = "";
 		}
 	}
 }

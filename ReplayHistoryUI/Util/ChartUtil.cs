@@ -15,8 +15,27 @@ namespace ReplayHistoryUI.Util
 		public static string ChartYTypeToName(ChartYType value) =>
 		value switch
 		{
-			ChartYType.TotalAccuracy or _ => "Rank"
+			ChartYType.Before => "Before cut",
+			ChartYType.Accuracy => "Accuracy",
+			ChartYType.After => "After",
+			ChartYType.TimeDependence => "Time Dependence",
+			ChartYType.TotalMisses => "Mistakes",
+			ChartYType.Misses => "Misses",
+			ChartYType.BadCuts => "Bad Cuts",
+			ChartYType.BombHits => "Bomb Hits",
+			ChartYType.WallHits => "Wall Hits",
+			ChartYType.SongsPlayed => "Songs Played",
+			ChartYType.TimePlayed => "Time Played",
+			ChartYType.TotalAccuracy or _ => "Rank",
 		};
+
+		public static string ChartYTypeToLabeler(double value, ChartYType type) =>
+			type switch
+			{
+				ChartYType.TotalAccuracy => $"{Math.Round(value, 2)}%",
+				ChartYType.TimePlayed => value > 60 ? new TimeSpan(0, (int)value, 0).ToString(@"hh\:mm\:ss") : new TimeSpan(0, (int)value, 0).ToString(@"mm\:ss"),
+				_ => $"{Math.Round(value, 2)}"
+			};
 
 		public static int GetDaysValueFromSelection(ChartDateSelectionValue value) =>
 			value switch
@@ -34,7 +53,7 @@ namespace ReplayHistoryUI.Util
 			{
 				ChartFilterHand.Right => BeatSaberBlue,
 				ChartFilterHand.Left => BeatSaberRed,
-				ChartFilterHand.Both or _ => theme.Equals("light", StringComparison.OrdinalIgnoreCase) ? BeatSaberWhiteLight : BeatSaberWhiteDark,
+				ChartFilterHand.Average or _ => theme.Equals("light", StringComparison.OrdinalIgnoreCase) ? BeatSaberWhiteLight : BeatSaberWhiteDark,
 			};
 	}
 }

@@ -1,6 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using CommunityToolkit.Mvvm.Messaging;
@@ -14,6 +15,7 @@ using ReplayHistoryUI.Services;
 using ReplayHistoryUI.Util;
 using SkiaSharp;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
@@ -90,6 +92,18 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 		}
 	}
 
+	public ChartComboBoxItem[] StatSelection { get; }
+	private ChartComboBoxItem _statSelectedValue;
+	public ChartComboBoxItem StatSelectedValue
+	{
+		get => _statSelectedValue;
+		set
+		{
+			SetProperty(ref _statSelectedValue, value);
+			UpdateStatFilter(value.Value);
+		}
+	}
+
 	[ObservableProperty]
 	public ObservableCollection<ISeries> _chartSeries;
 	[ObservableProperty]
@@ -130,18 +144,35 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 		_dateSelectedValue = _chartDateSelection[^1];
 		HandSelection =
 		[
-			new ChartComboBoxItem() { Text = "Both", Value = (int)ChartFilterHand.Both },
+			new ChartComboBoxItem() { Text = "Average", Value = (int)ChartFilterHand.Average },
 			new ChartComboBoxItem() { Text = "Left", Value = (int)ChartFilterHand.Left },
 			new ChartComboBoxItem() { Text = "Right", Value = (int)ChartFilterHand.Right },
+			new ChartComboBoxItem() { Text = "Both", Value = (int)ChartFilterHand.Both },
 		];
 		_handSelectedValue = HandSelection[0];
+		StatSelection =
+		[
+			new ChartComboBoxItem() { Text = ChartUtil.ChartYTypeToName(ChartYType.TotalAccuracy), Value = (int)ChartYType.TotalAccuracy },
+			new ChartComboBoxItem() { Text = ChartUtil.ChartYTypeToName(ChartYType.Before), Value = (int)ChartYType.Before },
+			new ChartComboBoxItem() { Text = ChartUtil.ChartYTypeToName(ChartYType.Accuracy), Value = (int)ChartYType.Accuracy },
+			new ChartComboBoxItem() { Text = ChartUtil.ChartYTypeToName(ChartYType.After), Value = (int)ChartYType.After },
+			new ChartComboBoxItem() { Text = ChartUtil.ChartYTypeToName(ChartYType.TimeDependence), Value = (int)ChartYType.TimeDependence },
+			new ChartComboBoxItem() { Text = ChartUtil.ChartYTypeToName(ChartYType.TotalMisses), Value = (int)ChartYType.TotalMisses },
+			new ChartComboBoxItem() { Text = ChartUtil.ChartYTypeToName(ChartYType.Misses), Value = (int)ChartYType.Misses },
+			new ChartComboBoxItem() { Text = ChartUtil.ChartYTypeToName(ChartYType.BadCuts), Value = (int)ChartYType.BadCuts },
+			new ChartComboBoxItem() { Text = ChartUtil.ChartYTypeToName(ChartYType.BombHits), Value = (int)ChartYType.BombHits },
+			new ChartComboBoxItem() { Text = ChartUtil.ChartYTypeToName(ChartYType.WallHits), Value = (int)ChartYType.WallHits },
+			new ChartComboBoxItem() { Text = ChartUtil.ChartYTypeToName(ChartYType.SongsPlayed), Value = (int)ChartYType.SongsPlayed },
+			new ChartComboBoxItem() { Text = ChartUtil.ChartYTypeToName(ChartYType.TimePlayed), Value = (int)ChartYType.TimePlayed },
+		];
+		_statSelectedValue = StatSelection[0];
 		_chartSeries = [];
 		_chartXAxes = [new Axis()];
 		_chartYAxes = [new Axis()];
 		_currentFilter = new ChartFilterInput()
 		{
 			DaysOffset = ChartUtil.GetDaysValueFromSelection(_dateSelectedValue.Days),
-			Hand = ChartFilterHand.Both,
+			Hand = ChartFilterHand.Average,
 			Type = ChartYType.TotalAccuracy
 		};
 		_ = Task.Run(CheckDirectory);
@@ -196,26 +227,13 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 		}, null);
 	}
 
-	private void CreateChart()
+	private LineSeries<ChartPoint> CreateChartSeriesInner(IOrderedEnumerable<ChartPoint> vals, ChartFilterHand hand, ThemeVariant theme)
 	{
-		var theme = Application.Current!.ActualThemeVariant!;
-		Application.Current.TryFindResource("SystemControlForegroundBaseHighBrush", theme, out var fgb);
-		var foregroundBrush = (fgb as SolidColorBrush)!;
-		var foregroundColor = new SKColor(foregroundBrush.Color.R, foregroundBrush.Color.G, foregroundBrush.Color.B);
-		Application.Current.TryFindResource("SystemControlForegroundChromeHighBrush", theme, out var fgmb);
-		var foregroundMediumBrush = (fgmb as SolidColorBrush)!;
-		var foregroundMediumColor = new SKColor(foregroundMediumBrush.Color.R, foregroundMediumBrush.Color.G, foregroundMediumBrush.Color.B);
-
-		ChartSeries.Clear();
-		ChartXAxes.Clear();
-		ChartYAxes.Clear();
-		var info = _bsorService.GetChartInfo(_currentFilter);
-		var vals = info.OrderBy(x => x.XValue);
-		var series = new LineSeries<ChartPoint>()
+		return new LineSeries<ChartPoint>()
 		{
-			Fill = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, _currentFilter.Hand).WithAlpha(30)),
-			GeometryFill = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, _currentFilter.Hand)),
-			Stroke = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, _currentFilter.Hand)) { StrokeThickness = 3 },
+			Fill = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, ChartFilterHand.Left).WithAlpha(30)),
+			GeometryFill = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, ChartFilterHand.Left)),
+			Stroke = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, ChartFilterHand.Left)) { StrokeThickness = 3 },
 			GeometryStroke = null,
 			GeometrySize = 16,
 			LineSmoothness = 0.30,
@@ -231,6 +249,52 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 				return s;
 			}
 		};
+	}
+
+	private List<LineSeries<ChartPoint>> CreateChartSeries(List<IOrderedEnumerable<ChartPoint>> points)
+	{
+		var retval = new List<LineSeries<ChartPoint>>();
+		var theme = Application.Current!.ActualThemeVariant!;
+		if (_currentFilter.Hand == ChartFilterHand.Both)
+		{
+			//Left
+			var vals = points[0];
+			var series = CreateChartSeriesInner(vals, ChartFilterHand.Left, theme);
+			retval.Add(series);
+			//Right
+			vals = points[1];
+			series = CreateChartSeriesInner(vals, ChartFilterHand.Right, theme);
+			retval.Add(series);
+		}
+		else
+		{
+			var vals = points[0];
+			var series = CreateChartSeriesInner(vals, _currentFilter.Hand, theme);
+			retval.Add(series);
+		}
+		return retval;
+	}
+
+	private void CreateChart()
+	{
+		var theme = Application.Current!.ActualThemeVariant!;
+		Application.Current.TryFindResource("SystemControlForegroundBaseHighBrush", theme, out var fgb);
+		var foregroundBrush = (fgb as SolidColorBrush)!;
+		var foregroundColor = new SKColor(foregroundBrush.Color.R, foregroundBrush.Color.G, foregroundBrush.Color.B);
+		Application.Current.TryFindResource("SystemControlForegroundChromeHighBrush", theme, out var fgmb);
+		var foregroundMediumBrush = (fgmb as SolidColorBrush)!;
+		var foregroundMediumColor = new SKColor(foregroundMediumBrush.Color.R, foregroundMediumBrush.Color.G, foregroundMediumBrush.Color.B);
+
+		ChartSeries.Clear();
+		ChartXAxes.Clear();
+		ChartYAxes.Clear();
+		var info = _bsorService.GetChartInfo(_currentFilter);
+		var vals = info.Select(x => x.OrderBy(y => y.XValue));
+		var series = CreateChartSeries([.. vals]);
+		foreach (var s in series)
+		{
+			ChartSeries.Add(s);
+		}
 		ChartXAxes.Add(new DateTimeAxis(TimeSpan.FromDays(1), date => date.ToString("yy-MM-dd"))
 		{
 			ShowSeparatorLines = true,
@@ -268,9 +332,8 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 				Color = foregroundMediumColor,
 				PathEffect = new DashEffect([3, 3])
 			},
-			Labeler = (double val) => $"{val}%"
+			Labeler = (double val) => ChartUtil.ChartYTypeToLabeler(val, _currentFilter.Type)
 		});
-		ChartSeries.Add(series);
 	}
 
 	private void UpdateChart(ChartUpdateChanges update)
@@ -283,18 +346,31 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 			_currentFilter.Type = update.Type.Value;
 
 		var info = _bsorService.GetChartInfo(_currentFilter);
-		var vals = info.OrderBy(x => x.XValue);
+		var vals = info.Select(x => x.OrderBy(y => y.XValue)).ToList();
 
 		if (update.Type.HasValue)
-			ChartSeries[0].Name = ChartUtil.ChartYTypeToName(_currentFilter.Type);
+		{
+			ChartYAxes[0].Name = ChartUtil.ChartYTypeToName(_currentFilter.Type);
+			ChartYAxes[0].Labeler = (double val) => ChartUtil.ChartYTypeToLabeler(val, _currentFilter.Type);
+		}
 		if (update.Hand.HasValue)
 		{
-			var theme = Application.Current!.ActualThemeVariant!;
-			((LineSeries<ChartPoint>)ChartSeries[0]).Fill = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, _currentFilter.Hand).WithAlpha(30));
-			((LineSeries<ChartPoint>)ChartSeries[0]).GeometryFill = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, _currentFilter.Hand));
-			((LineSeries<ChartPoint>)ChartSeries[0]).Stroke = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, _currentFilter.Hand)) { StrokeThickness = 3 };
+			ChartSeries = [];
+			var series = CreateChartSeries([.. vals]);
+			foreach (var s in series)
+			{
+				ChartSeries.Add(s);
+			}
 		}
-		ChartSeries[0].Values = vals.ToList();
+		if (_currentFilter.Hand == ChartFilterHand.Both)
+		{
+			ChartSeries[0].Values = vals[0].ToList();
+			ChartSeries[1].Values = vals[1].ToList();
+		}
+		else
+		{
+			ChartSeries[0].Values = vals[0].ToList();
+		}
 	}
 
 	public void UpdateHandFilter(int value)
@@ -305,6 +381,18 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 			UpdateChart(new ChartUpdateChanges()
 			{
 				Hand = hand
+			});
+		}
+	}
+
+	public void UpdateStatFilter(int value)
+	{
+		var stat = (ChartYType)value;
+		if (_currentFilter.Type != stat)
+		{
+			UpdateChart(new ChartUpdateChanges()
+			{
+				Type = stat
 			});
 		}
 	}
