@@ -186,7 +186,7 @@ namespace ReplayHistoryUI.Services
 				var lastTime = ((DateTimeOffset)order.Last().Info.Time!).AddSeconds(order.Last().LengthSeconds);
 				time = (TimeSpan)(lastTime - order.First().Info.Time)!;
 			}
-			return CreateChartPoint(input, ChartFilterHand.Left, x, time);
+			return CreateChartPoint(input, hand, x, time);
 		}
 
 		public List<List<ChartPoint>> GetChartInfo(ChartFilterInput input)

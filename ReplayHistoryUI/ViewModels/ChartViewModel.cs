@@ -231,9 +231,9 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 	{
 		return new LineSeries<ChartPoint>()
 		{
-			Fill = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, ChartFilterHand.Left).WithAlpha(30)),
-			GeometryFill = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, ChartFilterHand.Left)),
-			Stroke = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, ChartFilterHand.Left)) { StrokeThickness = 3 },
+			Fill = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, hand).WithAlpha(30)),
+			GeometryFill = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, hand)),
+			Stroke = new SolidColorPaint(ChartUtil.ChartHandTypeToColor((string)theme.Key, hand)) { StrokeThickness = 3 },
 			GeometryStroke = null,
 			GeometrySize = 16,
 			LineSmoothness = 0.30,
