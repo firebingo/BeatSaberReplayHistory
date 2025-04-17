@@ -132,6 +132,13 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 				LoadingProgress = (int)(value.Value * 100f);
 			}, null);
 		});
+		_messenger.Register<SongFilterChangedMessage>(this, (r, songs) =>
+		{
+			_syncContext.Post((state) =>
+			{
+				UpdateSongFilter(songs.Value);
+			}, null);
+		});
 		_chartDateSelection =
 		[
 			new ChartDateSelectionItem() { Days = ChartDateSelectionValue.SevenDays, Text = "7D" },
@@ -344,6 +351,8 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 			_currentFilter.Hand = update.Hand.Value;
 		if (update.Type.HasValue)
 			_currentFilter.Type = update.Type.Value;
+		if (update.Songs != null)
+			_currentFilter.Songs = update.Songs;
 
 		var info = _bsorService.GetChartInfo(_currentFilter);
 		var vals = info.Select(x => x.OrderBy(y => y.XValue)).ToList();
@@ -409,6 +418,19 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 		}
 	}
 
+	public void UpdateSongFilter(List<string> songs)
+	{
+		UpdateChart(new ChartUpdateChanges()
+		{
+			Songs = songs
+		});
+	}
+
+	public void OpenSongFilterDialog()
+	{
+		_messenger.Send(new OpenSongFilterDialogMessage(true));
+	}
+
 	public void Dispose()
 	{
 		Dispose(true);
@@ -438,6 +460,7 @@ public partial class ChartViewModel : ViewModelBase, IDisposable
 		public ChartFilterHand? Hand { get; set; }
 		public ChartYType? Type { get; set; }
 		public int? DaysOffset { get; set; }
+		public List<string>? Songs { get; set; }
 	}
 }
 

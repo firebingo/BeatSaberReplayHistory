@@ -1,4 +1,6 @@
-﻿namespace ReplayHistoryUI.Models
+﻿using System.Collections.Generic;
+
+namespace ReplayHistoryUI.Models
 {
 	public enum ChartFilterHand
 	{
@@ -29,5 +31,6 @@
 		public ChartFilterHand Hand { get; set; }
 		public ChartYType Type { get; set; }
 		public int DaysOffset { get; set; }
+		public List<string> Songs { get; set; } = [];
 	}
 }

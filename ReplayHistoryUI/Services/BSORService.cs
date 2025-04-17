@@ -198,6 +198,7 @@ namespace ReplayHistoryUI.Services
 			var a = _replays.Where(x => !string.IsNullOrWhiteSpace(x.Info?.Modifiers)).OrderByDescending(x => x.Info.Timestamp);
 			var dateGrouping = _replays.Where(x => x.Info.FailTime <= 0)
 				.Where(x => x.Info.Time.HasValue && (!minDate.HasValue || x.Info.Time > minDate.Value))
+				.Where(x => input.Songs.Count <= 0 || input.Songs.Contains(x.Info.Hash))
 				.OrderBy(x => x.Info.Time)
 				.GroupBy(x => new { x.Info.Time!.Value.DayOfYear, x.Info.Time.Value.Year });
 
@@ -228,5 +229,13 @@ namespace ReplayHistoryUI.Services
 
 			return retval;
 		}
+
+		public List<SongFilterEntry> GetSongFilterList() =>
+			_replays.Select(x => new SongFilterEntry()
+			{
+				Hash = x.Info.Hash,
+				SongName = x.Info.SongName,
+				Author = x.Info.Mapper
+			}).DistinctBy(x => x.Hash).ToList();
 	}
 }

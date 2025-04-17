@@ -96,6 +96,10 @@
           </StackPanel>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0 0 8 0">
             <StackPanel Orientation="Horizontal">
+              <Label VerticalAlignment="Center">Song Filter:</Label>
+              <Button Command="{Binding OpenSongFilterDialog}">Select</Button>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
               <Label VerticalAlignment="Center">Hand:</Label>
               <ComboBox VerticalAlignment="Center"
                         ItemsSource="{Binding HandSelection}"
